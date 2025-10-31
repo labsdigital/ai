@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Learning Units (Kartu & Bacaan)</title>
+    
+    <!-- Dependensi Eksternal -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Tertanam -->
+    <style>
+        :root {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-tertiary: #374151;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border-color: #4b5563;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #f3f4f6;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e5e7eb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #d1d5db;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* --- Gaya Kartu Kilas --- */
+        .card-container { perspective: 1000px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
+        .card-face { 
+            position: absolute; width: 100%; height: 100%; 
+            -webkit-backface-visibility: hidden; backface-visibility: hidden; 
+            display: flex; align-items: center; justify-content: center; 
+            padding: 1.5rem; border-radius: 0.75rem; 
+            background-color: var(--bg-secondary); 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: background-color 0.3s;
+        }
+        .card-back { 
+            transform: rotateY(180deg); 
+            background-color: var(--bg-tertiary);
+            transition: background-color 0.3s;
+        }
+        
+        /* --- Gaya Modal Kustom --- */
+        .modal-backdrop { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: rgba(0, 0, 0, 0.7); display: flex; 
+            align-items: center; justify-content: center; z-index: 50; 
+            opacity: 0; visibility: hidden; 
+            transition: opacity 0.2s ease, visibility 0.2s ease; 
+        }
+        .modal-backdrop.is-visible { opacity: 1; visibility: visible; }
+        .modal-content { 
+            background-color: var(--bg-secondary); 
+            padding: 1.5rem; border-radius: 0.5rem; 
+            max-width: 90%; width: 500px; 
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1); 
+            transform: scale(0.95); 
+            transition: transform 0.2s ease, background-color 0.3s; 
+        }
+        .modal-backdrop.is-visible .modal-content { transform: scale(1); }
+        .modal-input, .modal-select { 
+            width: 100%; 
+            background-color: var(--bg-tertiary); 
+            color: var(--text-primary); 
+            padding: 0.75rem; border-radius: 0.375rem; 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 1.5rem; box-sizing: border-box;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* --- Gaya Loader Besar --- */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .loader-overlay.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .loader-spinner {
+            border: 6px solid var(--border-color);
+            border-top: 6px solid #3b82f6;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+        }
+        .loader-text {
+            margin-top: 1.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+            padding: 0 2rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Gaya Folder --- */
+        .folder-header { 
+            display: flex; justify-content: space-between; 
+            align-items: center; padding: 0.875rem; 
+            background-color: var(--bg-secondary); 
+            border-radius: 0.5rem; cursor: pointer; 
+            transition: background-color 0.2s; 
+        }
+        .folder-header:hover { background-color: var(--bg-tertiary); }
+        .folder-title { 
+            display: flex; align-items: center; 
+            font-weight: 600; font-size: 1rem; 
+        }
+        .folder-toggle-icon { 
+            margin-right: 0.5rem; 
+            transition: transform 0.2s; 
+            font-size: 0.875rem; 
+        }
+        .folder-group.is-open .folder-toggle-icon { transform: rotate(90deg); }
+        .item-list { 
+            padding-left: 1rem; padding-top: 0.75rem; 
+            border-left: 2px solid var(--border-color); 
+            margin-left: 0.5rem; margin-top: 0.5rem;
+            transition: border-color 0.3s;
+        }
+
+        /* --- Gaya Tab Pembuatan --- */
+        .creation-tab { 
+            padding: 0.75rem 0.875rem; font-weight: 500; 
+            font-size: 0.875rem; border-bottom: 2px solid transparent; 
+            color: var(--text-secondary); cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .creation-tab:hover { color: var(--text-primary); }
+        .creation-tab.is-active { 
+            color: #60a5fa; 
+            border-color: #3b82f6; 
+        }
+
+        /* --- Gaya Konten Bacaan --- */
+        .prose-custom { color: var(--text-primary); }
+        .prose-custom p { margin-top: 1em; margin-bottom: 1em; }
+        .prose-custom h2 { 
+            font-size: 1.5rem; font-weight: 600; 
+            color: var(--text-primary); 
+            margin-top: 1.5em; margin-bottom: 0.5em; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.25em;
+            transition: color 0.3s, border-color 0.3s;
+        }
+        .prose-custom h3 { 
+            font-size: 1.25rem; font-weight: 600; 
+            color: var(--text-primary); 
+            margin-top: 1.25em; margin-bottom: 0.5em;
+            transition: color 0.3s;
+        }
+        .prose-custom ul { 
+            list-style-type: disc; margin-left: 1.5em; 
+            margin-top: 1em; margin-bottom: 1em; 
+        }
+        .prose-custom li { 
+            margin-top: 0.25em; margin-bottom: 0.25em; 
+        }
+        
+        /* --- Mobile Responsive Buttons --- */
+        @media (max-width: 640px) {
+            .folder-actions { flex-direction: column; gap: 0.5rem; }
+            .folder-actions button { width: 100%; font-size: 0.75rem; padding: 0.5rem; }
+            .item-unit { flex-direction: column; align-items: flex-start !important; }
+            .item-unit > div:last-child { width: 100%; margin-top: 0.75rem; margin-left: 0 !important; }
+            .item-unit button { font-size: 0.75rem; padding: 0.5rem 0.75rem; }
+        }
+        
+        /* --- Toggle Switch --- */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #3b82f6;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        .bg-themed { background-color: var(--bg-secondary); transition: background-color 0.3s; }
+        .border-themed { border-color: var(--border-color); transition: border-color 0.3s; }
+        .text-themed { color: var(--text-primary); transition: color 0.3s; }
+        .text-secondary-themed { color: var(--text-secondary); transition: color 0.3s; }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-3 md:p-4">
+
+    <!-- Loader Overlay Besar -->
+    <div id="loader-overlay" class="loader-overlay">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Sedang memproses dengan AI...<br>Mohon tunggu sebentar</div>
+    </div>
+
+    <!-- Kontainer Utama Aplikasi -->
+    <div id="app-container" class="w-full max-w-4xl mx-auto">
+        
+        <!-- ======================================================== -->
+        <!-- ==================== TAMPILAN BERANDA ================== -->
+        <!-- ======================================================== -->
+        <div id="home-view">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-themed">Unit Belajar AI</h1>
+            <p class="text-center mb-6 md:mb-8 text-secondary-themed">Buat kartu kilas & materi bacaan dengan AI.</p>
+
+            <!-- Navigasi Tab Utama -->
+            <div class="mb-4 border-b border-themed">
+                <nav class="flex -mb-px space-x-4 md:space-x-8" aria-label="Tabs">
+                    <button id="tab-generator-btn" class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm" role="tab" aria-controls="tab-panel-generator" aria-selected="true">
+                        Buat Baru
+                    </button>
+                    <button id="tab-decks-btn" class="tab-btn border-transparent whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm text-secondary-themed" role="tab" aria-controls="tab-panel-decks" aria-selected="false">
+                        Kelola Unit
+                    </button>
+                    <button id="tab-settings-btn" class="tab-btn border-transparent whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm text-secondary-themed" role="tab" aria-controls="tab-panel-settings" aria-selected="false">
+                        ⚙️
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Konten Panel Tab -->
+            <div>
+                <!-- Panel 1: Generator -->
+                <div id="tab-panel-generator" role="tabpanel" aria-labelledby="tab-generator-btn">
+                    <div class="bg-themed p-4 md:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
+                        
+                        <!-- Navigasi Sub-Tab Pembuatan -->
+                        <div class="mb-6 border-b border-themed">
+                            <nav class="flex space-x-4" aria-label="Creation Tabs">
+                                <button id="create-tab-lesson" class="creation-tab is-active" role="tab" aria-controls="create-lesson-form" aria-selected="true">
+                                    📖 Bacaan
+                                </button>
+                                <button id="create-tab-deck" class="creation-tab" role="tab" aria-controls="create-deck-form" aria-selected="false">
+                                    📇 Kartu
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Form 1: Buat Bacaan AI -->
+                        <div id="create-lesson-form" role="tabpanel" aria-labelledby="create-tab-lesson">
+                            <h2 class="text-xl font-semibold mb-4 text-themed">Buat Materi Bacaan AI</h2>
+                            <div class="mb-4">
+                                <label for="lesson-title-input" class="block mb-2 text-sm font-medium text-themed">Judul Bacaan</label>
+                                <input type="text" id="lesson-title-input" class="w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 bg-themed text-themed border-themed" placeholder="Mis: Pengantar Fotosintesis">
+                            </div>
+                            <div class="mb-4">
+                                <label for="lesson-topic-input" class="block mb-2 text-sm font-medium text-themed">Deskripsi Topik</label>
+                                <textarea id="lesson-topic-input" class="w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 bg-themed text-themed border-themed" rows="4" placeholder="Mis: Jelaskan apa itu fotosintesis, prosesnya, dan mengapa itu penting"></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="lesson-length-select" class="block mb-2 text-sm font-medium text-themed">Panjang Bacaan</label>
+                                    <select id="lesson-length-select" class="w-full border text-sm rounded-lg focus:ring-blue-500 p-2.5 bg-themed text-themed border-themed">
+                                        <option value="Ringkas">Ringkas (1-2 paragraf)</option>
+                                        <option selected value="Sedang">Sedang (3-5 paragraf)</option>
+                                        <option value="Mendalam">Mendalam (Detail)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="lesson-style-select" class="block mb-2 text-sm font-medium text-themed">Gaya Penulisan</label>
+                                    <select id="lesson-style-select" class="w-full border text-sm rounded-lg focus:ring-blue-500 p-2.5 bg-themed text-themed border-themed">
+                                        <option value="Informatif">Informatif (Default)</option>
+                                        <option value="Formal">Formal (Akademis)</option>
+                                        <option value="Santai">Santai (Percakapan)</option>
+                                        <option value="Sederhana">Sederhana (Mudah dipahami)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button id="generate-lesson-btn" class="mt-4 md:mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">
+                                Buat Bacaan dengan AI
+                            </button>
+                        </div>
+                        
+                        <!-- Form 2: Buat Kartu Kilas -->
+                        <div id="create-deck-form" class="hidden" role="tabpanel" aria-labelledby="create-tab-deck">
+                            <h2 class="text-xl font-semibold mb-4 text-themed">Buat Set Kartu Kilas</h2>
+                            <div class="mb-4">
+                                <label for="deck-title-input" class="block mb-2 text-sm font-medium text-themed">Judul Set Kartu</label>
+                                <input type="text" id="deck-title-input" class="w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 bg-themed text-themed border-themed" placeholder="Mis: Sejarah Kemerdekaan Indonesia">
+                            </div>
+                            <div class="mb-4">
+                                <label for="deck-topic-input" class="block mb-2 text-sm font-medium text-themed">Materi / Topik Kartu</label>
+                                <textarea id="deck-topic-input" class="w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 bg-themed text-themed border-themed" rows="4" placeholder="Mis: Poin-poin penting dari Rengasdengklok hingga Proklamasi"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label for="card-count-select" class="block mb-2 text-sm font-medium text-themed">Jumlah Kartu</label>
+                                <select id="card-count-select" class="w-full border text-sm rounded-lg focus:ring-blue-500 p-2.5 bg-themed text-themed border-themed">
+                                    <option value="5">5</option>
+                                    <option selected value="10">10 (Default)</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                            <button id="generate-deck-btn" class="mt-4 md:mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">
+                                Buat Kartu dengan AI
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Panel 2: Daftar Folder & Unit Belajar -->
+                <div id="tab-panel-decks" class="hidden" role="tabpanel" aria-labelledby="tab-decks-btn">
+                    <div id="folders-management-container">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl md:text-2xl font-bold text-themed">Unit Belajar Anda</h2>
+                            <button id="add-folder-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 md:px-4 rounded-lg transition-transform transform hover:scale-105 text-sm">
+                                + Folder
+                            </button>
+                        </div>
+                        <div id="folders-container" class="space-y-4 md:space-y-6 mt-4">
+                            <!-- Folder dan unit belajar akan dirender di sini oleh JS -->
+                        </div>
+                        <p id="no-folders-message" class="text-secondary-themed text-center py-8 hidden">
+                            Anda belum punya folder. Buat satu folder untuk mulai mengelola unit belajar Anda!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Panel 3: Setelan -->
+                <div id="tab-panel-settings" class="hidden" role="tabpanel" aria-labelledby="tab-settings-btn">
+                    <div class="bg-themed p-4 md:p-6 rounded-lg shadow-lg">
+                        <h2 class="text-xl md:text-2xl font-bold mb-6 text-themed">⚙️ Setelan</h2>
+                        
+                        <div class="space-y-6">
+                            <!-- Mode Tema -->
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-themed">Mode Tema</h3>
+                                    <p class="text-sm text-secondary-themed">Ubah tampilan aplikasi</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="theme-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="border-t border-themed pt-6">
+                                <p class="text-sm text-secondary-themed text-center">
+                                    <span id="current-theme-text">Mode: Gelap</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- =================== TAMPILAN BELAJAR =================== -->
+        <!-- ======================================================== -->
+        <div id="study-view" class="hidden">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <button id="back-to-home-btn" class="bg-themed text-themed py-2 px-3 md:px-4 rounded-lg transition text-sm md:text-base">
+                    ← Kembali
+                </button>
+                <h2 id="study-deck-title" class="text-lg md:text-2xl font-bold text-center text-themed truncate px-2 md:px-4">Mempelajari...</h2>
+                <div class="text-sm md:text-lg font-mono bg-themed px-2 md:px-3 py-1 rounded-md flex-shrink-0"><span id="card-counter">0</span> / <span id="total-cards">0</span></div>
+            </div>
+            <div id="study-card-container" class="card-container h-64 md:h-80 w-full mb-4 md:mb-6">
+                <div class="card-inner">
+                    <div class="card-face text-xl md:text-3xl text-center" id="card-front" aria-label="Pertanyaan kartu"></div>
+                    <div class="card-face card-back text-lg md:text-xl text-center" id="card-back" aria-label="Jawaban kartu"></div>
+                </div>
+            </div>
+            <div id="flip-button-container" class="text-center">
+                <button id="flip-card-btn" class="w-full md:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">Balik Kartu</button>
+            </div>
+            <div id="srs-buttons-container" class="hidden grid grid-cols-3 gap-3 md:gap-4 mt-4 md:mt-6">
+                <button data-quality="1" class="srs-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105 text-sm md:text-base">Sulit</button>
+                <button data-quality="3" class="srs-btn bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105 text-sm md:text-base">Bisa</button>
+                <button data-quality="5" class="srs-btn bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105 text-sm md:text-base">Mudah</button>
+            </div>
+            <div id="study-complete-message" class="hidden text-center p-6 md:p-8 bg-themed rounded-lg">
+                <h3 class="text-xl md:text-2xl font-bold text-green-400">Kerja Bagus!</h3>
+                <p class="text-themed mt-2">Anda telah menyelesaikan semua kartu untuk sesi ini.</p>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- =================== TAMPILAN BACAAN ==================== -->
+        <!-- ======================================================== -->
+        <div id="lesson-view" class="hidden">
+            <div class="mb-4 md:mb-6">
+                <button id="back-to-home-from-lesson-btn" class="bg-themed text-themed py-2 px-3 md:px-4 rounded-lg transition text-sm md:text-base">
+                    ← Kembali
+                </button>
+            </div>
+            <div class="bg-themed p-4 md:p-6 lg:p-8 rounded-lg shadow-lg">
+                <h2 id="lesson-view-title" class="text-2xl md:text-3xl font-bold text-themed mb-4 md:mb-6 border-b border-themed pb-4"></h2>
+                <div id="lesson-view-content" class="prose-custom max-w-none">
+                    <!-- Konten bacaan dari AI akan dimasukkan di sini -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- ===================== MODAL KUSTOM ===================== -->
+        <!-- ======================================================== -->
+        <div id="custom-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-content">
+                <h3 id="modal-title" class="text-xl font-semibold mb-4 text-themed"></h3>
+                <div id="modal-body" class="mb-6">
+                    <!-- Konten dinamis (input, select, teks) akan dimasukkan di sini -->
+                </div>
+                <div id="modal-actions" class="flex justify-end space-x-4">
+                    <!-- Tombol dinamis akan dimasukkan di sini -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- ======================= JAVASCRIPT ===================== -->
+    <!-- ======================================================== -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- API ENDPOINT ---
+        const API_URL = 'https://taraka.id/apigate/polli-openai.php';
+
+        // --- Theme Management ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const currentThemeText = document.getElementById('current-theme-text');
+        const htmlElement = document.documentElement;
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            htmlElement.setAttribute('data-theme', 'light');
+            themeToggle.checked = true;
+            currentThemeText.textContent = 'Mode: Terang';
+        }
+        
+        themeToggle.addEventListener('change', () => {
+            if (themeToggle.checked) {
+                htmlElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                currentThemeText.textContent = 'Mode: Terang';
+            } else {
+                htmlElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                currentThemeText.textContent = 'Mode: Gelap';
+            }
+        });
+
+        // --- Loader Management ---
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const showLoader = () => loaderOverlay.classList.add('is-visible');
+        const hideLoader = () => loaderOverlay.classList.remove('is-visible');
+
+        // --- State Management ---
+        let state = {
+            folders: [] 
+        };
+        let currentStudySession = {
+            itemId: null,
+            queue: [],
+            totalCards: 0
+        };
+
+        /**
+         * Menghasilkan ID unik
+         */
+        const generateId = (prefix) => {
+            return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        };
+
+        /**
+         * Memuat state dari localStorage.
+         */
+        const loadState = () => {
+            const savedStateJSON = localStorage.getItem('aiFlashcardsState');
+            let needsSave = false;
+            
+            const DEFAULT_FOLDER_NAME = 'Umum';
+
+            if (!savedStateJSON) {
+                state.folders = [{ 
+                    id: generateId('folder'), 
+                    name: DEFAULT_FOLDER_NAME,
+                    items: [], 
+                    isDefault: true 
+                }];
+                needsSave = true;
+            } else {
+                const savedState = JSON.parse(savedStateJSON);
+
+                if (savedState.folders) {
+                    if (savedState.folders.length > 0 && savedState.folders[0].hasOwnProperty('decks')) {
+                        console.log('Migrating v2 state to v3...');
+                        state.folders = savedState.folders.map(folder => ({
+                            id: folder.id || generateId('folder'),
+                            name: folder.isDefault ? DEFAULT_FOLDER_NAME : (folder.name || 'Folder Lama'),
+                            isDefault: folder.isDefault || false,
+                            items: folder.decks.map(deck => ({ 
+                                ...deck, 
+                                id: deck.id || generateId('deck'),
+                                type: 'deck'
+                            }))
+                        }));
+                        needsSave = true;
+                    } else {
+                        state.folders = savedState.folders;
+                        const defaultFolder = state.folders.find(f => f.isDefault);
+                        if (defaultFolder && defaultFolder.name === 'Belum Dikategorikan') {
+                            defaultFolder.name = DEFAULT_FOLDER_NAME;
+                            needsSave = true;
+                        }
+                    }
+                } else if (savedState.decks) {
+                    console.log('Migrating v1 state to v3...');
+                    const migratedItems = savedState.decks.map(deck => ({
+                        ...deck,
+                        id: deck.id || generateId('deck'),
+                        type: 'deck'
+                    }));
+                    state.folders = [{ 
+                        id: generateId('folder'), 
+                        name: DEFAULT_FOLDER_NAME,
+                        items: migratedItems, 
+                        isDefault: true 
+                    }];
+                    needsSave = true;
+                } else {
+                    state.folders = [{ id: generateId('folder'), name: DEFAULT_FOLDER_NAME, items: [], isDefault: true }];
+                    needsSave = true;
+                }
+            }
+
+            let defaultFolder = state.folders.find(f => f.isDefault);
+            if (!defaultFolder) {
+                defaultFolder = { id: generateId('folder'), name: DEFAULT_FOLDER_NAME, items: [], isDefault: true };
+                state.folders.unshift(defaultFolder);
+                needsSave = true;
+            }
+
+            if (needsSave) {
+                saveState();
+            }
+        };
+
+        /**
+         * Menyimpan state saat ini ke localStorage.
+         */
+        const saveState = () => {
+            localStorage.setItem('aiFlashcardsState', JSON.stringify(state));
+        };
+
+        // --- UI Selectors ---
+        const homeView = document.getElementById('home-view');
+        const studyView = document.getElementById('study-view');
+        const lessonView = document.getElementById('lesson-view');
+        const foldersContainer = document.getElementById('folders-container');
+        const noFoldersMessage = document.getElementById('no-folders-message');
+        const addFolderBtn = document.getElementById('add-folder-btn');
+        
+        // --- Tab Logic ---
+        const tabs = [
+            { btn: document.getElementById('tab-generator-btn'), panel: document.getElementById('tab-panel-generator') },
+            { btn: document.getElementById('tab-decks-btn'),     panel: document.getElementById('tab-panel-decks') },
+            { btn: document.getElementById('tab-settings-btn'),  panel: document.getElementById('tab-panel-settings') }
+        ];
+        const activeTabClasses = ['border-blue-500', 'text-blue-400'];
+        const inactiveTabClasses = ['border-transparent'];
+
+        tabs.forEach(tab => {
+            tab.btn.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    const isSelected = t === tab;
+                    t.panel.classList.toggle('hidden', !isSelected);
+                    if (isSelected) {
+                        t.btn.classList.add(...activeTabClasses);
+                        t.btn.classList.remove(...inactiveTabClasses);
+                    } else {
+                        t.btn.classList.remove(...activeTabClasses);
+                        t.btn.classList.add(...inactiveTabClasses);
+                    }
+                    t.btn.setAttribute('aria-selected', isSelected.toString());
+                });
+                if (tab.btn.id === 'tab-decks-btn') {
+                    renderFoldersAndItems();
+                }
+            });
+        });
+
+        // --- Sub-Tab Pembuatan ---
+        const creationTabs = [
+            { btn: document.getElementById('create-tab-lesson'), panel: document.getElementById('create-lesson-form') },
+            { btn: document.getElementById('create-tab-deck'), panel: document.getElementById('create-deck-form') }
+        ];
+        creationTabs.forEach(tab => {
+            tab.btn.addEventListener('click', () => {
+                creationTabs.forEach(t => {
+                    const isSelected = t === tab;
+                    t.panel.classList.toggle('hidden', !isSelected);
+                    t.btn.classList.toggle('is-active', isSelected);
+                    t.btn.setAttribute('aria-selected', isSelected.toString());
+                });
+            });
+        });
+
+        // --- View Switching ---
+        const showView = (view) => {
+            homeView.classList.toggle('hidden', view !== 'home');
+            studyView.classList.toggle('hidden', view !== 'study');
+            lessonView.classList.toggle('hidden', view !== 'lesson');
+        };
+
+        // --- Modal ---
+        const customModal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalActions = document.getElementById('modal-actions');
+
+        const showModal = (title, bodyHtml, actionsHtml) => {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = bodyHtml;
+            modalActions.innerHTML = actionsHtml;
+            customModal.classList.add('is-visible');
+            customModal.setAttribute('aria-hidden', 'false');
+        };
+        const hideModal = () => {
+            customModal.classList.remove('is-visible');
+            customModal.setAttribute('aria-hidden', 'true');
+        };
+        const showAlert = (message, onOk) => {
+            showModal('Informasi', `<p class="text-lg text-themed">${message}</p>`, 
+                `<button id="modal-ok" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">OK</button>`);
+            document.getElementById('modal-ok').onclick = () => { hideModal(); if (onOk) onOk(); };
+        };
+        const showConfirm = (message, onConfirm) => {
+            showModal('Konfirmasi Hapus', `<p class="text-lg text-themed">${message}</p>`, `
+                <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">Batal</button>
+                <button id="modal-confirm" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Hapus</button>`);
+            document.getElementById('modal-confirm').onclick = () => { hideModal(); onConfirm(true); };
+            document.getElementById('modal-cancel').onclick = () => { hideModal(); onConfirm(false); };
+        };
+        const showPrompt = (title, message, placeholder, defaultValue = '', onConfirm) => {
+            showModal(title, `
+                <p class="text-themed mb-3">${message}</p>
+                <input type="text" id="modal-input" class="modal-input" placeholder="${placeholder}" value="${defaultValue}">`, `
+                <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">Batal</button>
+                <button id="modal-confirm" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Simpan</button>`);
+            const input = document.getElementById('modal-input');
+            input.focus(); input.select();
+            document.getElementById('modal-confirm').onclick = () => {
+                const value = input.value.trim();
+                if (value) { hideModal(); onConfirm(value); } else { input.classList.add('border-red-500'); }
+            };
+            document.getElementById('modal-cancel').onclick = () => hideModal();
+            input.addEventListener('keydown', (e) => e.key === 'Enter' && document.getElementById('modal-confirm').click());
+        };
+        const showMoveModal = (itemId, fromFolderId, onConfirm) => {
+            const folderOptions = state.folders
+                .filter(f => f.id !== fromFolderId)
+                .map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+            if (!folderOptions) { showAlert('Tidak ada folder lain untuk dipindahkan.'); return; }
+            showModal('Pindahkan Unit Belajar', `
+                <p class="text-themed mb-3">Pindahkan unit belajar ke folder:</p>
+                <select id="modal-select" class="modal-select">${folderOptions}</select>`, `
+                <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">Batal</button>
+                <button id="modal-confirm" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Pindahkan</button>`);
+            document.getElementById('modal-confirm').onclick = () => { hideModal(); onConfirm(document.getElementById('modal-select').value); };
+            document.getElementById('modal-cancel').onclick = () => hideModal();
+        };
+
+        // --- Helper Pencarian ---
+        const findFolder = (folderId) => state.folders.find(f => f.id === folderId);
+        const findItemAndFolder = (itemId) => {
+            for (const folder of state.folders) {
+                const itemIndex = folder.items.findIndex(i => i.id === itemId);
+                if (itemIndex !== -1) {
+                    return { item: folder.items[itemIndex], folder: folder, itemIndex: itemIndex };
+                }
+            }
+            return { item: null, folder: null, itemIndex: -1 };
+        };
+
+        // --- Render Functions ---
+        
+        const renderFoldersAndItems = () => {
+            foldersContainer.innerHTML = '';
+            const hasContent = state.folders.length > 1 || (state.folders.length === 1 && state.folders[0].items.length > 0);
+
+            if (!hasContent) {
+                noFoldersMessage.classList.remove('hidden');
+            } else {
+                noFoldersMessage.classList.add('hidden');
+                state.folders.forEach(folder => {
+                    const folderGroup = document.createElement('div');
+                    folderGroup.className = 'folder-group';
+                    folderGroup.dataset.folderId = folder.id;
+
+                    const decks = folder.items.filter(i => i.type === 'deck');
+                    const lessons = folder.items.filter(i => i.type === 'lesson');
+
+                    const folderHeader = document.createElement('div');
+                    folderHeader.className = 'folder-header';
+                    folderHeader.innerHTML = `
+                        <div class="folder-title" role="button" tabindex="0" aria-expanded="false" aria-controls="item-list-${folder.id}">
+                            <span class="folder-toggle-icon">&gt;</span>
+                            <span>${folder.name}</span>
+                            <span class="ml-2 text-xs md:text-sm font-normal text-secondary-themed">(${decks.length} kartu, ${lessons.length} bacaan)</span>
+                        </div>
+                        <div class="folder-actions flex space-x-2">
+                            ${folder.isDefault ? 
+                                '<span class="px-2 md:px-3 py-1 text-xs text-secondary-themed italic">Default</span>' : 
+                                `<button data-action="rename-folder" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-2 md:px-3 rounded text-xs md:text-sm transition">Rename</button>
+                                 <button data-action="delete-folder" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-2 md:px-3 rounded text-xs md:text-sm transition">Hapus</button>`
+                            }
+                        </div>
+                    `;
+                    
+                    const itemList = document.createElement('div');
+                    itemList.id = `item-list-${folder.id}`;
+                    itemList.className = 'item-list space-y-3 md:space-y-4 hidden';
+
+                    if (folder.items.length === 0) {
+                        itemList.innerHTML = `<p class="text-secondary-themed italic text-sm">Folder ini kosong.</p>`;
+                    } else {
+                        folder.items.forEach(item => {
+                            const itemElement = document.createElement('div');
+                            itemElement.className = 'item-unit bg-themed p-3 md:p-4 rounded-lg flex justify-between items-start shadow-md';
+                            itemElement.dataset.itemId = item.id;
+
+                            if (item.type === 'deck') {
+                                itemElement.innerHTML = `
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-base md:text-lg font-semibold text-themed truncate"><span class="mr-2">📇</span>${item.title}</h3>
+                                        <p class="text-xs md:text-sm text-secondary-themed">${item.cards.length} kartu</p>
+                                    </div>
+                                    <div class="flex flex-wrap space-x-2 gap-2 ml-4 flex-shrink-0">
+                                        <button data-action="study-deck" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Belajar</button>
+                                        <button data-action="move-item" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Pindah</button>
+                                        <button data-action="download-deck" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Unduh</button>
+                                        <button data-action="delete-item" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Hapus</button>
+                                    </div>
+                                `;
+                            } else if (item.type === 'lesson') {
+                                itemElement.innerHTML = `
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-base md:text-lg font-semibold text-themed truncate"><span class="mr-2">📖</span>${item.title}</h3>
+                                        <p class="text-xs md:text-sm text-secondary-themed">Materi Bacaan</p>
+                                    </div>
+                                    <div class="flex flex-wrap space-x-2 gap-2 ml-4 flex-shrink-0">
+                                        <button data-action="read-lesson" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Baca</button>
+                                        <button data-action="move-item" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Pindah</button>
+                                        <button data-action="download-lesson" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Unduh</button>
+                                        <button data-action="delete-item" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg transition text-xs md:text-sm">Hapus</button>
+                                    </div>
+                                `;
+                            }
+                            itemList.appendChild(itemElement);
+                        });
+                    }
+
+                    folderGroup.appendChild(folderHeader);
+                    folderGroup.appendChild(itemList);
+                    foldersContainer.appendChild(folderGroup);
+                });
+            }
+        };
+
+        const renderStudyCard = () => {
+            const studyCardContainer = document.getElementById('study-card-container');
+            const srsButtonsContainer = document.getElementById('srs-buttons-container');
+            const flipButtonContainer = document.getElementById('flip-button-container');
+            const studyCompleteMessage = document.getElementById('study-complete-message');
+            const cardCounterEl = document.getElementById('card-counter');
+            
+            studyCardContainer.classList.remove('is-flipped');
+            srsButtonsContainer.classList.add('hidden');
+            flipButtonContainer.classList.remove('hidden');
+
+            if (currentStudySession.queue.length === 0) {
+                studyCardContainer.classList.add('hidden');
+                flipButtonContainer.classList.add('hidden');
+                srsButtonsContainer.classList.add('hidden');
+                studyCompleteMessage.classList.remove('hidden');
+                cardCounterEl.textContent = currentStudySession.totalCards;
+                return;
+            }
+
+            studyCardContainer.classList.remove('hidden');
+            studyCompleteMessage.classList.add('hidden');
+
+            const { item: deck } = findItemAndFolder(currentStudySession.itemId);
+            if (!deck || deck.type !== 'deck') {
+                showAlert('Error: Set kartu tidak ditemukan.', () => showView('home'));
+                return;
+            }
+            
+            const cardIndexInDeck = currentStudySession.queue[0];
+            const card = deck.cards[cardIndexInDeck];
+
+            document.getElementById('card-front').textContent = card.question;
+            document.getElementById('card-back').textContent = card.answer;
+            
+            const cardsRemaining = currentStudySession.queue.length;
+            const currentCardNum = currentStudySession.totalCards - cardsRemaining + 1;
+            cardCounterEl.textContent = currentCardNum;
+        };
+
+        const renderLesson = (lessonId) => {
+            const { item: lesson } = findItemAndFolder(lessonId);
+            if (!lesson || lesson.type !== 'lesson') {
+                showAlert('Error: Materi bacaan tidak ditemukan.', () => showView('home'));
+                return;
+            }
+            document.getElementById('lesson-view-title').textContent = lesson.title;
+            document.getElementById('lesson-view-content').innerHTML = lesson.content;
+            showView('lesson');
+        };
+
+        // --- SRS Logic ---
+        const updateSRS = (deckId, cardIndexInDeck, quality) => {
+            const { item: deck } = findItemAndFolder(deckId);
+            if (!deck || deck.type !== 'deck') return;
+
+            const card = deck.cards[cardIndexInDeck];
+            
+            if (quality < 3) {
+                card.repetition = 0;
+                card.interval = 1;
+            } else {
+                if (card.repetition === 0) card.interval = 1;
+                else if (card.repetition === 1) card.interval = 6;
+                else card.interval = Math.round(card.interval * card.easeFactor);
+                card.repetition += 1;
+            }
+
+            card.easeFactor = (card.easeFactor || 2.5) + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            if (card.easeFactor < 1.3) card.easeFactor = 1.3;
+
+            const now = new Date();
+            card.nextReviewDate = new Date(now.setDate(now.getDate() + card.interval)).toISOString();
+        };
+
+        // --- Download Helpers ---
+        const downloadDeckAsHTML = (deck) => {
+            const generateStandaloneHTML = (deckData) => {
+                const cardsJsonString = JSON.stringify(deckData.cards.map(c => ({ question: c.question, answer: c.answer })));
+                const sanitizedTitle = deckData.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kartu Kilas: ${sanitizedTitle}</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{font-family:'Inter',sans-serif;background-color:#111827;color:#e5e7eb}.card-container{perspective:1000px}.card-inner{position:relative;width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d}.card-container.is-flipped .card-inner{transform:rotateY(180deg)}.card-face{position:absolute;width:100%;height:100%;-webkit-backface-visibility:hidden;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;padding:2rem;border-radius:.75rem;box-shadow:0 4px 6px -1px rgb(0 0 0/.1),0 2px 4px -2px rgb(0 0 0/.1)}.card-back{transform:rotateY(180deg)}</style></head><body class="min-h-screen flex items-center justify-center p-4"><div class="w-full max-w-2xl mx-auto text-center"><h1 class="text-3xl font-bold mb-6">${sanitizedTitle}</h1><div id="card-container" class="card-container h-80 w-full mb-6"><div class="card-inner"><div id="card-front" class="card-face text-2xl bg-gray-800"></div><div id="card-back" class="card-face card-back text-xl bg-gray-700"></div></div></div><div class="flex justify-center items-center space-x-4"><button id="prev-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition">Sebelumnya</button><button id="flip-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition">Balik Kartu</button><button id="next-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition">Berikutnya</button></div><p class="mt-4 text-gray-400" id="card-counter">1 / ${deckData.cards.length}</p></div><script>document.addEventListener('DOMContentLoaded',()=>{const cards=${cardsJsonString};let currentIndex=0;const cardContainer=document.getElementById('card-container');const cardFront=document.getElementById('card-front');const cardBack=document.getElementById('card-back');const cardCounter=document.getElementById('card-counter');const flipBtn=document.getElementById('flip-btn');const nextBtn=document.getElementById('next-btn');const prevBtn=document.getElementById('prev-btn');function renderCard(){if(!cards||cards.length===0){cardFront.textContent='Tidak ada kartu.';cardCounter.textContent='0 / 0';return}const card=cards[currentIndex];cardFront.textContent=card.question;cardBack.textContent=card.answer;cardCounter.textContent=\`\${currentIndex+1} / \${cards.length}\`;cardContainer.classList.remove('is-flipped')}flipBtn.addEventListener('click',()=>cardContainer.classList.toggle('is-flipped'));nextBtn.addEventListener('click',()=>{currentIndex=(currentIndex+1)%cards.length;renderCard()});prevBtn.addEventListener('click',()=>{currentIndex=(currentIndex-1+cards.length)%cards.length;renderCard()});renderCard()});<\/script></body></html>`;
+            };
+            const htmlContent = generateStandaloneHTML(deck);
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const safeFilename = deck.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${safeFilename || 'flashcards'}_flashcards.html`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        };
+
+        const downloadLessonAsHTML = (lesson) => {
+            const generateStandaloneHTML = (lessonData) => {
+                const sanitizedTitle = lessonData.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const content = lessonData.content;
+                return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Bacaan: ${sanitizedTitle}</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{font-family:'Inter',sans-serif;background-color:#111827;color:#e5e7eb}.prose-custom{color:#d1d5db}.prose-custom p{margin-top:1em;margin-bottom:1em}.prose-custom h2{font-size:1.5rem;font-weight:600;color:#fff;margin-top:1.5em;margin-bottom:.5em;border-bottom:1px solid #374151;padding-bottom:.25em}.prose-custom h3{font-size:1.25rem;font-weight:600;color:#e5e7eb;margin-top:1.25em;margin-bottom:.5em}.prose-custom ul{list-style-type:disc;margin-left:1.5em;margin-top:1em;margin-bottom:1em}.prose-custom li{margin-top:.25em;margin-bottom:.25em}</style></head><body class="min-h-screen bg-gray-900 text-gray-200 p-4 md:p-8"><div class="max-w-3xl mx-auto bg-gray-800 p-6 sm:p-8 rounded-lg shadow-lg"><h1 class="text-3xl font-bold text-white mb-6 border-b border-gray-700 pb-4">${sanitizedTitle}</h1><div class="prose-custom max-w-none">${content}</div></div></body></html>`;
+            };
+
+            const htmlContent = generateStandaloneHTML(lesson);
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const safeFilename = lesson.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${safeFilename || 'bacaan'}_bacaan.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        };
+
+        // --- Event Handlers ---
+
+        const cleanApiResponseText = (text) => {
+            let cleanedText = text.trim();
+            if (cleanedText.startsWith('"') && cleanedText.endsWith('"')) {
+                cleanedText = cleanedText.substring(1, cleanedText.length - 1);
+            }
+            return cleanedText
+                .replace(/\\"/g, '"')
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\\t/g, '\t');
+        };
+
+        // ### GENERATE DECK ###
+        document.getElementById('generate-deck-btn').addEventListener('click', async () => {
+            const deckTitle = document.getElementById('deck-title-input').value.trim();
+            const topic = document.getElementById('deck-topic-input').value.trim();
+            if (!topic || !deckTitle) {
+                showAlert('Harap isi Judul dan Materi/Topik untuk membuat kartu.');
+                return;
+            }
+            
+            const cardCount = document.getElementById('card-count-select').value;
+            
+            showLoader();
+
+            try {
+                const fullPrompt = `Anda adalah AI ahli membuat kartu kilas (flashcard) berkualitas tinggi. 
+
+Tugas: Buat ${cardCount} kartu kilas berdasarkan topik berikut.
+
+Topik: "${topic}"
+
+Persyaratan:
+1. Setiap kartu harus memiliki "question" (pertanyaan jelas dan spesifik) dan "answer" (jawaban lengkap namun ringkas)
+2. Pertanyaan harus mendorong pemikiran dan pemahaman, bukan hanya hafalan
+3. Jawaban harus informatif dan mudah dipahami
+4. Gunakan bahasa Indonesia yang baik dan benar
+5. PENTING: Kembalikan HANYA array JSON yang valid, tanpa teks tambahan apapun
+6. Format: [{"question": "...", "answer": "..."}, ...]
+
+Topik: "${topic}"`;
+
+                const payload = { prompt: fullPrompt, key: "" };
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                
+                const responseText = await response.text();
+                const cleanedJsonText = cleanApiResponseText(responseText);
+                const generatedCards = JSON.parse(cleanedJsonText);
+                
+                if (!Array.isArray(generatedCards) || generatedCards.length === 0) {
+                    throw new Error("API tidak mengembalikan format kartu yang valid.");
+                }
+
+                const newDeck = {
+                    id: generateId('deck'),
+                    type: 'deck',
+                    title: deckTitle,
+                    cards: generatedCards.map(card => ({
+                        ...card,
+                        repetition: 0,
+                        interval: 1,
+                        easeFactor: 2.5,
+                        nextReviewDate: new Date().toISOString()
+                    }))
+                };
+
+                const defaultFolder = state.folders.find(f => f.isDefault) || state.folders[0];
+                defaultFolder.items.push(newDeck);
+                
+                saveState();
+                renderFoldersAndItems();
+                document.getElementById('deck-title-input').value = '';
+                document.getElementById('deck-topic-input').value = '';
+
+                hideLoader();
+                document.getElementById('tab-decks-btn').click(); 
+                showAlert(`Set kartu "${newDeck.title}" berhasil dibuat di folder '${defaultFolder.name}'!`);
+
+            } catch (error) {
+                console.error('Error generating flashcards:', error);
+                hideLoader();
+                showAlert(`Maaf, terjadi kesalahan saat membuat kartu kilas. ${error.message}. Silakan coba lagi.`);
+            }
+        });
+
+        // ### GENERATE LESSON ###
+        document.getElementById('generate-lesson-btn').addEventListener('click', async () => {
+            const title = document.getElementById('lesson-title-input').value.trim();
+            const topic = document.getElementById('lesson-topic-input').value.trim();
+            const length = document.getElementById('lesson-length-select').value;
+            const style = document.getElementById('lesson-style-select').value;
+
+            if (!title || !topic) {
+                showAlert('Harap isi Judul dan Deskripsi Topik untuk membuat bacaan.');
+                return;
+            }
+
+            showLoader();
+
+            try {
+                const lengthGuide = {
+                    'Ringkas': '1-2 paragraf singkat yang padat',
+                    'Sedang': '3-5 paragraf dengan penjelasan yang cukup detail',
+                    'Mendalam': '6-10 paragraf dengan analisis mendalam dan contoh-contoh'
+                };
+
+                const styleGuide = {
+                    'Informatif': 'gaya informatif dengan fokus pada fakta dan data',
+                    'Formal': 'gaya formal akademis dengan istilah teknis yang tepat',
+                    'Santai': 'gaya santai dan percakapan yang mudah dipahami',
+                    'Sederhana': 'bahasa sederhana untuk pemula dengan banyak analogi'
+                };
+
+                const fullPrompt = `Anda adalah AI penulis materi pembelajaran yang ahli dan berpengalaman.
+
+Tugas: Buat materi bacaan berkualitas tinggi tentang topik berikut.
+
+Judul: "${title}"
+Topik: "${topic}"
+Panjang: ${lengthGuide[length]}
+Gaya: ${styleGuide[style]}
+
+Persyaratan Format:
+1. Kembalikan HANYA konten HTML, mulai langsung dengan tag <p> atau <h2>
+2. JANGAN sertakan tag <html>, <head>, <body>, atau <h1>
+3. Gunakan <h2> untuk sub-judul utama dan <h3> untuk sub-sub judul
+4. Gunakan <p> untuk paragraf
+5. Gunakan <ul> dan <li> untuk daftar jika diperlukan
+6. Pastikan HTML valid dan rapi
+
+Persyaratan Konten:
+1. Mulai langsung dengan pengenalan topik tanpa menyebutkan judul lagi
+2. Jelaskan konsep dengan jelas dan terstruktur
+3. Berikan contoh konkret jika relevan
+4. Gunakan bahasa Indonesia yang baik dan benar
+5. Pastikan informasi akurat dan up-to-date
+6. Buat bacaan yang engaging dan informatif
+
+Topik: "${topic}"`;
+
+                const payload = { prompt: fullPrompt, key: "" };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+                const responseText = await response.text();
+                const cleanedHtmlContent = cleanApiResponseText(responseText);
+
+                if (!cleanedHtmlContent || !cleanedHtmlContent.includes('<')) {
+                    throw new Error("API tidak mengembalikan format bacaan yang valid.");
+                }
+
+                const newLesson = {
+                    id: generateId('lesson'),
+                    type: 'lesson',
+                    title: title,
+                    content: cleanedHtmlContent
+                };
+
+                const defaultFolder = state.folders.find(f => f.isDefault) || state.folders[0];
+                defaultFolder.items.push(newLesson);
+
+                saveState();
+                renderFoldersAndItems();
+                document.getElementById('lesson-title-input').value = '';
+                document.getElementById('lesson-topic-input').value = '';
+
+                hideLoader();
+                document.getElementById('tab-decks-btn').click();
+                showAlert(`Materi bacaan "${newLesson.title}" berhasil dibuat di folder '${defaultFolder.name}'!`);
+
+            } catch (error) {
+                console.error('Error generating lesson:', error);
+                hideLoader();
+                showAlert(`Maaf, terjadi kesalahan saat membuat bacaan. ${error.message}. Silakan coba lagi.`);
+            }
+        });
+
+        // ### FOLDER & ITEM ACTIONS ###
+        foldersContainer.addEventListener('click', (e) => {
+            const folderGroup = e.target.closest('.folder-group');
+            if (!folderGroup) return;
+            
+            const folderId = folderGroup.dataset.folderId;
+            const itemUnit = e.target.closest('.item-unit');
+            const itemId = itemUnit ? itemUnit.dataset.itemId : null;
+            const actionTarget = e.target.closest('button');
+            const action = actionTarget ? actionTarget.dataset.action : null;
+            
+            const toggleHeader = e.target.closest('.folder-title');
+            if (toggleHeader && !actionTarget) {
+                const itemList = folderGroup.querySelector('.item-list');
+                const isOpen = !itemList.classList.contains('hidden');
+                itemList.classList.toggle('hidden');
+                folderGroup.classList.toggle('is-open', !isOpen);
+                toggleHeader.setAttribute('aria-expanded', !isOpen);
+            }
+
+            if (action === 'rename-folder') {
+                const folder = findFolder(folderId);
+                if (folder) showPrompt('Ganti Nama Folder', 'Nama folder baru:', 'Nama folder', folder.name, (newName) => {
+                    folder.name = newName;
+                    saveState();
+                    renderFoldersAndItems();
+                });
+            }
+            
+            if (action === 'delete-folder') {
+                const folder = findFolder(folderId);
+                if (!folder || folder.isDefault) return;
+                const warning = folder.items.length > 0 ? `Semua ${folder.items.length} unit di dalamnya akan ikut terhapus.` : '';
+                showConfirm(`Anda yakin ingin menghapus folder "${folder.name}"? ${warning}`, (confirmed) => {
+                    if (confirmed) {
+                        state.folders = state.folders.filter(f => f.id !== folderId);
+                        saveState();
+                        renderFoldersAndItems();
+                    }
+                });
+            }
+
+            if (!itemId || !action) return;
+            const { item } = findItemAndFolder(itemId);
+            if (!item) return;
+
+            switch (action) {
+                case 'study-deck':
+                    handleStudyDeck(itemId);
+                    break;
+                case 'read-lesson':
+                    renderLesson(itemId);
+                    break;
+                case 'move-item':
+                    showMoveModal(itemId, folderId, (toFolderId) => {
+                        handleMoveItem(itemId, folderId, toFolderId);
+                    });
+                    break;
+                case 'download-deck':
+                    if (item.type === 'deck') downloadDeckAsHTML(item);
+                    break;
+                case 'download-lesson':
+                    if (item.type === 'lesson') downloadLessonAsHTML(item);
+                    break;
+                case 'delete-item':
+                    showConfirm(`Anda yakin ingin menghapus unit "${item.title}"?`, (confirmed) => {
+                        if (confirmed) handleMoveItem(itemId, folderId, null);
+                    });
+                    break;
+            }
+        });
+
+        addFolderBtn.addEventListener('click', () => {
+            showPrompt('Buat Folder Baru', 'Nama untuk folder baru:', 'Nama Folder', '', (name) => {
+                state.folders.push({ id: generateId('folder'), name: name, items: [], isDefault: false });
+                saveState();
+                renderFoldersAndItems();
+            });
+        });
+        
+        const handleStudyDeck = (deckId) => {
+            const { item: deck } = findItemAndFolder(deckId);
+            if (!deck || deck.type !== 'deck') return;
+
+            let studyQueue = deck.cards.map((card, idx) => idx);
+            for (let i = studyQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [studyQueue[i], studyQueue[j]] = [studyQueue[j], studyQueue[i]];
+            }
+
+            currentStudySession = { itemId: deck.id, queue: studyQueue, totalCards: studyQueue.length };
+            document.getElementById('study-deck-title').textContent = deck.title;
+            document.getElementById('total-cards').textContent = currentStudySession.totalCards;
+            showView('study');
+            renderStudyCard();
+        };
+
+        const handleMoveItem = (itemId, fromFolderId, toFolderId) => {
+            const fromFolder = findFolder(fromFolderId);
+            if (!fromFolder) return;
+            const itemIndex = fromFolder.items.findIndex(i => i.id === itemId);
+            if (itemIndex === -1) return;
+            
+            const [itemToMove] = fromFolder.items.splice(itemIndex, 1);
+
+            if (toFolderId) {
+                const toFolder = findFolder(toFolderId);
+                if (toFolder) toFolder.items.push(itemToMove);
+            }
+
+            saveState();
+            renderFoldersAndItems();
+        };
+
+        // ### STUDY VIEW HANDLERS ###
+        document.getElementById('back-to-home-btn').addEventListener('click', () => {
+            showView('home');
+            renderFoldersAndItems();
+            currentStudySession = { itemId: null, queue: [], totalCards: 0 };
+        });
+        
+        document.getElementById('flip-card-btn').addEventListener('click', () => {
+            document.getElementById('study-card-container').classList.add('is-flipped');
+            document.getElementById('flip-button-container').classList.add('hidden');
+            document.getElementById('srs-buttons-container').classList.remove('hidden');
+        });
+        
+        document.querySelectorAll('.srs-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const quality = parseInt(e.target.dataset.quality);
+                const cardIndexInDeck = currentStudySession.queue[0];
+                const deckId = currentStudySession.itemId;
+                updateSRS(deckId, cardIndexInDeck, quality);
+                currentStudySession.queue.shift();
+                saveState();
+                setTimeout(renderStudyCard, 300);
+            });
+        });
+
+        // ### LESSON VIEW HANDLERS ###
+        document.getElementById('back-to-home-from-lesson-btn').addEventListener('click', () => {
+            showView('home');
+            renderFoldersAndItems();
+        });
+
+        // --- Initialization ---
+        const init = () => {
+            loadState();
+            renderFoldersAndItems();
+            showView('home');
+        };
+
+        init();
+    });
+    </script> 
+</body>
+</html>
